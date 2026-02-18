@@ -2,80 +2,80 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>AR Floor Cube</title>
+  <title>Quest Browser AR Button</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { margin: 0; overflow: hidden; }
-    #start {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 12px 20px;
-      font-size: 16px;
-    }
   </style>
 </head>
 <body>
 
-<button id="start">Start AR</button>
-
 <script type="module">
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js";
-import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/webxr/ARButton.js";
 
 let camera, scene, renderer;
-let reticle, cube;
-let hitTestSource = null;
-let hitTestSourceRequested = false;
+let controller;
+let menu;
 
 init();
 
 function init() {
   scene = new THREE.Scene();
 
-  camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.xr.enabled = true;
   document.body.appendChild(renderer.domElement);
 
-  const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
-  scene.add(light);
+  // Controllers
+  controller = renderer.xr.getController(0);
+  scene.add(controller);
 
-  // Reticle (floor indicator)
-  const ringGeo = new THREE.RingGeometry(0.15, 0.2, 32);
-  ringGeo.rotateX(-Math.PI / 2);
-  const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  reticle = new THREE.Mesh(ringGeo, ringMat);
-  reticle.matrixAutoUpdate = false;
-  reticle.visible = false;
-  scene.add(reticle);
-
-  // Cube
-  const geometry = new THREE.BoxGeometry(0.25, 0.25, 0.25);
-  const material = new THREE.MeshStandardMaterial({ color: 0x00ff88 });
-  cube = new THREE.Mesh(geometry, material);
-  cube.visible = false;
-  scene.add(cube);
-
-  document.getElementById("start").addEventListener("click", () => {
-    document.body.appendChild(
-      ARButton.createButton(renderer, {
-        requiredFeatures: ["hit-test"]
-      })
-    );
-    document.getElementById("start").style.display = "none";
-  });
+  createMenu();
 
   renderer.setAnimationLoop(render);
 
-  renderer.xr.addEventListener("sessionstart", () => {
-    renderer.xr.getSession().addEventListener("select", onSelect);
-  });
+  // Auto-request immersive-ar session (browser adds native AR button)
+  if (navigator.xr) {
+    navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+      if (supported) {
+        // The Quest browser will automatically create the "Enter AR" button
+        // No need to manually attach ARButton
+        console.log("AR supported, browser will show native button.");
+      }
+    });
+  }
 }
 
+function createMenu() {
+  const geometry = new THREE.PlaneGeometry(0.15, 0.1);
+  const material = new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.DoubleSide });
+  menu = new THREE.Mesh(geometry, material);
+  menu.position.set(0, 0.05, -0.15);
+  menu.visible = false;
+  controller.add(menu);
+}
+
+function render() {
+  const session = renderer.xr.getSession();
+  if (session) {
+    const inputSources = session.inputSources;
+    for (const source of inputSources) {
+      if (source.gamepad && source.handedness === "right") {
+        const aPressed = source.gamepad.buttons[4]?.pressed;
+        if (aPressed) menu.visible = true;
+      }
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+</script>
+
+</body>
+</html>
 function onSelect() {
   if (reticle.visible) {
     cube.position.setFromMatrixPosition(reticle.matrix);
