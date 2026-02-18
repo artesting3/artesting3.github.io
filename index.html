@@ -2,65 +2,69 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Quest Browser AR Menu</title>
+  <title>AR Controller Menu</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { margin: 0; overflow: hidden; }
+    #start {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 20px;
+      font-size: 16px;
+    }
   </style>
 </head>
 <body>
 
+<button id="start">Start AR</button>
+
 <script type="module">
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js";
+import { ARButton } from "https://cdn.jsdelivr.net/npm/three@0.160/examples/jsm/webxr/ARButton.js";
 
 let camera, scene, renderer;
-let controller;
-let menu;
+let controller, menu;
 
 init();
 
 function init() {
   scene = new THREE.Scene();
 
-  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.xr.enabled = true;
   document.body.appendChild(renderer.domElement);
 
-  // Controller setup
+  // Light
+  const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+  scene.add(light);
+
+  // Controller
   controller = renderer.xr.getController(0);
   scene.add(controller);
 
-  // Create menu (hidden by default)
-  createMenu();
-
-  // Start render loop
-  renderer.setAnimationLoop(render);
-
-  // Auto-request immersive-ar session (Quest adds native button)
-  if (navigator.xr) {
-    navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
-      if (supported) {
-        console.log("AR supported, Quest will show native Enter AR button.");
-      }
-    });
-  }
-}
-
-function createMenu() {
-  // Simple plane as menu
+  // Create floating menu attached to controller
   const geometry = new THREE.PlaneGeometry(0.15, 0.1);
   const material = new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.DoubleSide });
   menu = new THREE.Mesh(geometry, material);
-
-  // Position above controller
-  menu.position.set(0, 0.05, -0.15);
+  menu.position.set(0, 0.05, -0.15); // slightly above & forward
   menu.visible = false;
-
-  // Parent to controller
   controller.add(menu);
+
+  // ARButton
+  document.getElementById("start").addEventListener("click", () => {
+    document.body.appendChild(
+      ARButton.createButton(renderer, { requiredFeatures: [] })
+    );
+    document.getElementById("start").style.display = "none";
+  });
+
+  // Render loop
+  renderer.setAnimationLoop(render);
 }
 
 function render() {
@@ -69,11 +73,9 @@ function render() {
     const inputSources = session.inputSources;
     for (const source of inputSources) {
       if (source.gamepad && source.handedness === "right") {
-        // A button on Quest controller = buttons[4]
+        // Quest right controller A button = buttons[4]
         const aPressed = source.gamepad.buttons[4]?.pressed;
-        if (aPressed) {
-          menu.visible = true;
-        }
+        menu.visible = aPressed; // show menu while holding A
       }
     }
   }
