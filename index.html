@@ -44,20 +44,22 @@ function init() {
   scene.add(light);
 
   // Controller
-  controller = renderer.xr.getController(0);
-  scene.add(controller);
-
+  controllerL = renderer.xr.getController(0);
+  scene.add(controllerL);
+  controllerR = renderer.xr.getController(1);
+  scene.add(controllerR);
+  
   // Create floating menu attached to controller
   const geometry = new THREE.PlaneGeometry(0.15, 0.1);
   const material = new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.DoubleSide });
   menu = new THREE.Mesh(geometry, material);
-  menu.position.set(0, 0.05, -0.15); // slightly above & forward
+  menu.position.set(0, 0, 0); // slightly above & forward
   menu.visible = false;
-  controller.add(menu);
+  controllerR.add(menu);
 
   // ARButton
   document.getElementById("start").addEventListener("click", () => {
-    document.body.appendChild(
+   document.body.appendChild(
       ARButton.createButton(renderer, { requiredFeatures: [] })
     );
     document.getElementById("start").style.display = "none";
