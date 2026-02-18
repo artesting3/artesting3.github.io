@@ -6,25 +6,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { margin: 0; overflow: hidden; }
+
+    /* Fullscreen white button */
     #enter-ar {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 12px 20px;
-      font-size: 16px;
-      background-color: #222;
-      color: white;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: white;
       border: none;
-      border-radius: 6px;
       cursor: pointer;
+      font-size: 16px;
     }
-    #enter-ar:hover { background-color: #555; }
+
+    /* Top-left label */
+    #enter-ar span {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 20px;
+      color: black;
+      font-family: sans-serif;
+    }
   </style>
 </head>
 <body>
 
-<button id="enter-ar">Enter AR</button>
+<button id="enter-ar">
+  <span>Click to start</span>
+</button>
 
 <script type="module">
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js";
@@ -39,7 +50,7 @@ init();
 function init() {
   scene = new THREE.Scene();
 
-  camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -52,25 +63,25 @@ function init() {
 
   createMenu();
 
-  renderer.setAnimationLoop(render);
-
   // Custom AR button
   const btn = document.getElementById("enter-ar");
   btn.addEventListener("click", async () => {
-    if (navigator.xr) {
-      const supported = await navigator.xr.isSessionSupported('immersive-ar');
-      if (supported) {
-        xrSession = await navigator.xr.requestSession('immersive-ar', {
-          requiredFeatures: []
-        });
-        renderer.xr.setSession(xrSession);
-        btn.style.display = 'none';
-      } else {
-        alert("AR not supported on this device.");
-      }
-    } else {
-      alert("WebXR not available.");
-    }
+    if (!navigator.xr) return alert("WebXR not available");
+
+    const supported = await navigator.xr.isSessionSupported("immersive-ar");
+    if (!supported) return alert("AR not supported on this device");
+
+    // Request XR session
+    xrSession = await navigator.xr.requestSession("immersive-ar", { requiredFeatures: [] });
+
+    // Attach session
+    renderer.xr.setSession(xrSession);
+
+    // Hide button after click
+    btn.style.display = "none";
+
+    // Start render loop
+    renderer.setAnimationLoop(render);
   });
 }
 
