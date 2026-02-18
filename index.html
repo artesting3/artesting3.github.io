@@ -2,40 +2,13 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Custom AR Button + Menu</title>
+  <title>Quest Browser AR Menu</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { margin: 0; overflow: hidden; }
-
-    /* Fullscreen white button */
-    #enter-ar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background-color: white;
-      border: none;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    /* Top-left label */
-    #enter-ar span {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      font-size: 20px;
-      color: black;
-      font-family: sans-serif;
-    }
   </style>
 </head>
 <body>
-
-<button id="enter-ar">
-  <span>Click to start</span>
-</button>
 
 <script type="module">
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160/build/three.module.js";
@@ -43,7 +16,6 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160/build/three.mod
 let camera, scene, renderer;
 let controller;
 let menu;
-let xrSession = null;
 
 init();
 
@@ -61,41 +33,33 @@ function init() {
   controller = renderer.xr.getController(0);
   scene.add(controller);
 
+  // Create menu (hidden by default)
   createMenu();
 
-  // Custom AR button
-  const btn = document.getElementById("enter-ar");
-  btn.addEventListener("click", async () => {
-    if (!navigator.xr) return alert("WebXR not available");
+  // Start render loop
+  renderer.setAnimationLoop(render);
 
-    const supported = await navigator.xr.isSessionSupported("immersive-ar");
-    if (!supported) return alert("AR not supported on this device");
-
-    // Request XR session
-    xrSession = await navigator.xr.requestSession("immersive-ar", { requiredFeatures: [] });
-
-    // Attach session
-    renderer.xr.setSession(xrSession);
-
-    // Hide button after click
-    btn.style.display = "none";
-
-    // Start render loop
-    renderer.setAnimationLoop(render);
-  });
+  // Auto-request immersive-ar session (Quest adds native button)
+  if (navigator.xr) {
+    navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+      if (supported) {
+        console.log("AR supported, Quest will show native Enter AR button.");
+      }
+    });
+  }
 }
 
 function createMenu() {
+  // Simple plane as menu
   const geometry = new THREE.PlaneGeometry(0.15, 0.1);
-  const material = new THREE.MeshBasicMaterial({
-    color: 0x222222,
-    side: THREE.DoubleSide
-  });
-
+  const material = new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.DoubleSide });
   menu = new THREE.Mesh(geometry, material);
-  menu.position.set(0, 0.05, -0.15); // slightly above & forward
+
+  // Position above controller
+  menu.position.set(0, 0.05, -0.15);
   menu.visible = false;
 
+  // Parent to controller
   controller.add(menu);
 }
 
@@ -105,8 +69,11 @@ function render() {
     const inputSources = session.inputSources;
     for (const source of inputSources) {
       if (source.gamepad && source.handedness === "right") {
+        // A button on Quest controller = buttons[4]
         const aPressed = source.gamepad.buttons[4]?.pressed;
-        if (aPressed) menu.visible = true;
+        if (aPressed) {
+          menu.visible = true;
+        }
       }
     }
   }
